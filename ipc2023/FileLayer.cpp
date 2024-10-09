@@ -36,28 +36,41 @@ CFileLayer::~CFileLayer()
    END_CATCH
 }
 
-BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)
-{
-   TRY
-   {
-      CFile m_FileDes(_T("IpcBuff.txt"),
-                   CFile::modeCreate | CFile::modeWrite);
-   //////////////////////// fill the blank ///////////////////////////////
-         // 파일 생성
-         m_FileDes.Write(ppayload,nlength);
-         m_FileDes.Close();
-         ///////////////////////////////////////////////////////////////////////
-   }
-      CATCH(CFileException, e)
-   {
-#ifdef _DEBUG
-      afxDump << "File could not be opened " << e->m_cause << "\n";
-#endif
-      return FALSE;
-   }
-   END_CATCH
 
-      return TRUE;
+BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)//EthernetFrame으로 전송할 때
+{
+	string file_name = "IpcBuff.txt";
+
+	TRY
+	{
+		CFile m_FileDes(file_name.c_str(), CFile::modeCreate | CFile::modeWrite);
+		//////////////////////// fill the blank ///////////////////////////////
+		// 파일 생성
+		if (nlength <= 1488)
+		{
+			m_FileDes.Write(ppayload, nlength);
+			m_FileDes.Close();
+		}
+		else {
+			ThreadParams* pParams = new ThreadParams;
+			pParams->ppayload = ppayload;
+			pParams->nlength = nlength;
+			pParams->pFileLayer = this;
+			AfxBeginThread(FileThread, pParams);
+		}
+
+		///////////////////////////////////////////////////////////////////////
+	}
+	CATCH(CFileException, e)
+	{
+#ifdef _DEBUG
+		afxDump << "File could not be opened " << e->m_cause << "\n";
+#endif
+		return FALSE;
+	}
+	END_CATCH
+
+		return TRUE;
 }
 
 BOOL CFileLayer::Receive()
@@ -166,4 +179,9 @@ UINT CFileLayer::FileThread(LPVOID pParam)
 
 	return 0; // ������ ����
 }
+
+
+
+
+
 
