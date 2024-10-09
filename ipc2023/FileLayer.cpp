@@ -1,7 +1,3 @@
-// FileLayer.cpp: implementation of the CFileLayer class.
-//
-//////////////////////////////////////////////////////////////////////
-
 #include "stdafx.h"
 #include "pch.h"
 #include "FileLayer.h"
@@ -28,8 +24,8 @@ CFileLayer::~CFileLayer()
 	TRY
 	{
 		//////////////////////// fill the blank ///////////////////////////////
-				CFile::Remove(_T("IpcBuff.txt")); // ÆÄÀÏ Á¦°Å
-		///////////////////////////////////////////////////////////////////////
+				CFile::Remove(_T("IpcBuff.txt")); // íŒŒì¼ ì œê±°
+	///////////////////////////////////////////////////////////////////////
 	}
 		CATCH(CFileException, e)
 	{
@@ -40,30 +36,16 @@ CFileLayer::~CFileLayer()
 	END_CATCH
 }
 
-
-
-BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)//EthernetFrameÀ¸·Î Àü¼ÛÇÒ ¶§
+BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)
 {
-	string file_name = "IpcBuff.txt";
-
 	TRY
 	{
-		CFile m_FileDes(file_name.c_str(), CFile::modeCreate | CFile::modeWrite);
+		CFile m_FileDes(_T("IpcBuff.txt"),
+						 CFile::modeCreate | CFile::modeWrite);
 	//////////////////////// fill the blank ///////////////////////////////
-			// ÆÄÀÏ »ı¼º
-	if (nlength <= 1488) 
-	{
-		m_FileDes.Write(ppayload, nlength);
-		m_FileDes.Close();		
-	}
-	else {
-		ThreadParams* pParams = new ThreadParams;
-		pParams->ppayload = ppayload;
-		pParams->nlength = nlength;
-		pParams->pFileLayer = this;
-		AfxBeginThread(FileThread, pParams);
-	}
-
+			// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+			m_FileDes.Write(ppayload,nlength);
+			m_FileDes.Close();
 			///////////////////////////////////////////////////////////////////////
 	}
 		CATCH(CFileException, e)
@@ -78,34 +60,45 @@ BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)//EthernetFrameÀ¸·Î À
 		return TRUE;
 }
 
-BOOL CFileLayer::Receive() //EthernetLayer·ÎºÎÅÍ ¹ŞÀ»¶§
+BOOL CFileLayer::Receive() //EthernetLayerï¿½Îºï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 {
-	string file_name = "IpcBuff.txt";
 	TRY
 	{
-		CFile m_FileDes(file_name.c_str(), CFile::modeRead);
+		CFile m_FileDes(_T("IpcBuff.txt"), CFile::modeRead);
 
-	//////////////////////// fill the blank ///////////////////////////////
-			// ÆÄÀÏÀÇ ³»¿ëÀ» °¡Á®¿Â´Ù.
+			// íŒŒì¼ì˜ ë‚´ìš©ì„ ê°€ì ¸ì˜¨ë‹¤.
 
-			// Ethernet Frame = Header | Data ÀÌ¹Ç·Î, ÇöÀç ¾î´ÀÁ¤µµÀÇ Å©±âÀÇ µ¥ÀÌÅÍ°¡ µé¾îÀÖ´ÂÁö ¸ğ¸¥´Ù.
-			// ±×·¡¼­ Ethernet Header Å©±â¿Í Ethernet DataÀÇ ÃÖ´ë Å©±â·Î FrameÀÇ Å©±â¸¦ Á¤ÇÑ´Ù.
+			// Ethernet Frame = Header | Data ì´ë¯€ë¡œ, í˜„ì¬ ì–´ëŠì •ë„ì˜ í¬ê¸°ì˜ ë°ì´í„°ê°€ ë“¤ì–´ìˆëŠ”ì§€ ëª¨ë¥¸ë‹¤.
+			// ê·¸ë˜ì„œ Ethernet Header í¬ê¸°ì™€ Ethernet Dataì˜ ìµœëŒ€ í¬ê¸°ë¡œ Frameì˜ í¬ê¸°ë¥¼ ì •í•œë‹¤.
+			int filesize = 1488;
+			int TotalRead = 0;
 			int nlength = ETHER_HEADER_SIZE + ETHER_MAX_DATA_SIZE;
 			unsigned char* ppayload = new unsigned char[nlength + 1];
 
-			// Á¤ÇØÁø FrameÀÇ ±æÀÌ¸¸Å­ ÆÄÀÏÀÇ ³»¿ë(»ó´ë ÇÁ·Î¼¼½º¿¡°Ô Àü¼Û ¹ŞÀº Ethernet Frame)À»
-			// ÀĞ¾î¿Í¼­ ppayload¸¦ °áÁ¤ÇÑ´Ù.
-			m_FileDes.Read(ppayload,nlength);
-			ppayload[nlength] = '\0';
+			// ì •í•´ì§„ Frameì˜ ê¸¸ì´ë§Œí¼ íŒŒì¼ì˜ ë‚´ìš©(ìƒëŒ€ í”„ë¡œì„¸ìŠ¤ì—ê²Œ ì „ì†¡ ë°›ì€ Ethernet Frame)ì„
+			// ì½ì–´ì™€ì„œ ppayloadë¥¼ ê²°ì •í•œë‹¤.
+			while (TotalRead < nlength)
+			{
+				int bytestoRead = min(filesize, nlength - TotalRead);
+				int bytesRead = m_FileDes.Read(ppayload + TotalRead, bytestoRead);
 
-			// Ethernet °èÃşÀ¸·Î ÆÄÀÏ¿¡¼­ °¡Á®¿Â FrameÀ» ³Ñ°ÜÁØ´Ù. 
-			if (!mp_aUpperLayer[0]->Receive(ppayload)) { // ³Ñ°ÜÁÖÁö ¸øÇß´Ù¸é FALSE
+				if (bytesRead == 0)
+					break;
+
+				TotalRead += bytesRead;
+			}
+			ppayload[TotalRead] = '\0';
+
+			// Ethernet ê³„ì¸µìœ¼ë¡œ íŒŒì¼ì—ì„œ ê°€ì ¸ì˜¨ Frameì„ ë„˜ê²¨ì¤€ë‹¤.
+			if (!mp_aUpperLayer[0]->Receive(ppayload)) { // ë„˜ê²¨ì£¼ì§€ ëª»í–ˆë‹¤ë©´ FALSE
 				m_FileDes.Close();
+				delete[] ppayload;
 				return FALSE;
 			}
-			// ¼º°øÇß´Ù¸é TRUE¸¦ return
-	///////////////////////////////////////////////////////////////////////
+
+			// ì„±ê³µí–ˆë‹¤ë©´ TRUEë¥¼ return
 			m_FileDes.Close();
+			delete[] ppayload;
 	}
 		CATCH(CFileException, e)
 	{
@@ -122,55 +115,55 @@ BOOL CFileLayer::Receive() //EthernetLayer·ÎºÎÅÍ ¹ŞÀ»¶§
 UINT CFileLayer::FileThread(LPVOID pParam)
 {
 	using namespace std;
-	// pParamÀ» ThreadParams Å¸ÀÔÀ¸·Î Ä³½ºÆÃ
+	// pParamï¿½ï¿½ ThreadParams Å¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ä³ï¿½ï¿½ï¿½ï¿½
 	ThreadParams* pParams = (ThreadParams*)pParam;
 
-	// ÀÎ¼ö ÃßÃâ
+	// ï¿½Î¼ï¿½ ï¿½ï¿½ï¿½ï¿½
 	unsigned char* ppayload = pParams->ppayload;
 	int nlength = pParams->nlength;
 
 	const int CHUNK_SIZE = 1488;
-	int chunkCount = (nlength + CHUNK_SIZE - 1) / CHUNK_SIZE; // ÃÑ Á¶°¢ °³¼ö °è»ê
+	int chunkCount = (nlength + CHUNK_SIZE - 1) / CHUNK_SIZE; // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 	std::vector<FILE_FRAGMENT> payloadChunks;
 
-	// µ¥ÀÌÅÍ¸¦ 1488¹ÙÀÌÆ®¾¿ ³ª´©¾î FILE_FRAGMENT ±¸Á¶Ã¼¿¡ ÀúÀå
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ 1488ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ FILE_FRAGMENT ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	for (int i = 0; i < chunkCount; ++i) {
 		FILE_FRAGMENT fragment = {};
 		fragment.fapp_totlen = nlength;
 		fragment.fapp_seq_num = i;
 
-		// Á¶°¢ÀÇ Å¸ÀÔ ¼³Á¤
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		if (chunkCount == 1) {
-			fragment.fapp_type = 0x00; // ´ÜÆíÈ­µÇÁö ¾ÊÀ½
+			fragment.fapp_type = 0x00; // ï¿½ï¿½ï¿½ï¿½È­ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		}
 		else if (i == 0) {
-			fragment.fapp_type = 0x01; // ´ÜÆíÈ­ÀÇ Ã¹ ºÎºĞ
+			fragment.fapp_type = 0x01; // ï¿½ï¿½ï¿½ï¿½È­ï¿½ï¿½ Ã¹ ï¿½Îºï¿½
 		}
 		else if (i == chunkCount - 1) {
-			fragment.fapp_type = 0x03; // ´ÜÆíÈ­ÀÇ ¸¶Áö¸· ºÎºĞ
+			fragment.fapp_type = 0x03; // ï¿½ï¿½ï¿½ï¿½È­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Îºï¿½
 		}
 		else {
-			fragment.fapp_type = 0x02; // ´ÜÆíÈ­ÀÇ Áß°£ ºÎºĞ
+			fragment.fapp_type = 0x02; // ï¿½ï¿½ï¿½ï¿½È­ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½Îºï¿½
 		}
 
-		// ³²Àº ¹ÙÀÌÆ®¿Í CHUNK_SIZE Áß ÀÛÀº °ªÀ» ¼±ÅÃÇÏ¿© ¸¶Áö¸· Á¶°¢À» Ã³¸®
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ CHUNK_SIZE ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
 		int bytesToWrite = min(CHUNK_SIZE, nlength - i * CHUNK_SIZE);
 
-		// µ¥ÀÌÅÍ¸¦ fapp_data¿¡ º¹»ç
+		// ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ fapp_dataï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		memcpy(fragment.fapp_data, ppayload + i * CHUNK_SIZE, bytesToWrite);
 
-		// ¸Ş½ÃÁö Á¾·ù ¼³Á¤ (ÇÊ¿ä¿¡ µû¶ó º¯°æ °¡´É)
-		fragment.fapp_msg_type = 0x01; // ¿¹: ÀÏ¹İ µ¥ÀÌÅÍ
+		// ï¿½Ş½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½Ê¿ä¿¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
+		fragment.fapp_msg_type = 0x01; // ï¿½ï¿½: ï¿½Ï¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-		// º¤ÅÍ¿¡ Á¶°¢ Ãß°¡
+		// ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
 		payloadChunks.push_back(fragment);
 	}
 
-	// ÀÌÈÄ payloadChunks º¤ÅÍ¸¦ »ç¿ëÇÏ¿© Á¶°¢º°·Î µ¥ÀÌÅÍ Àü¼Û ¶Ç´Â Ã³¸® °¡´É
+	// ï¿½ï¿½ï¿½ï¿½ payloadChunks ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½ Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-	// µ¿ÀûÀ¸·Î ÇÒ´çÇÑ ¸Ş¸ğ¸® ÇØÁ¦
-	delete pParams;	
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ò´ï¿½ï¿½ï¿½ ï¿½Ş¸ï¿½ ï¿½ï¿½ï¿½ï¿½
+	delete pParams;
 
-	return 0; // ½º·¹µå Á¾·á
+	return 0; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 }
 
