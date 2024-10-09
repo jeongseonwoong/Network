@@ -15,56 +15,56 @@ static char THIS_FILE[] = __FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CFileLayer::CFileLayer(char* pName)
-	: CBaseLayer(pName)
+   : CBaseLayer(pName)
 {
 }
 
 CFileLayer::~CFileLayer()
 {
-	TRY
-	{
-		//////////////////////// fill the blank ///////////////////////////////
-				CFile::Remove(_T("IpcBuff.txt")); // 파일 제거
-	///////////////////////////////////////////////////////////////////////
-	}
-		CATCH(CFileException, e)
-	{
+   TRY
+   {
+      //////////////////////// fill the blank ///////////////////////////////
+            CFile::Remove(_T("IpcBuff.txt")); // 파일 제거
+      ///////////////////////////////////////////////////////////////////////
+   }
+      CATCH(CFileException, e)
+   {
 #ifdef _DEBUG
-		afxDump << "File cannot be removed\n";
+      afxDump << "File cannot be removed\n";
 #endif
-	}
-	END_CATCH
+   }
+   END_CATCH
 }
 
 BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)
 {
-	TRY
-	{
-		CFile m_FileDes(_T("IpcBuff.txt"),
-						 CFile::modeCreate | CFile::modeWrite);
-	//////////////////////// fill the blank ///////////////////////////////
-			// ���� ����
-			m_FileDes.Write(ppayload,nlength);
-			m_FileDes.Close();
-			///////////////////////////////////////////////////////////////////////
-	}
-		CATCH(CFileException, e)
-	{
+   TRY
+   {
+      CFile m_FileDes(_T("IpcBuff.txt"),
+                   CFile::modeCreate | CFile::modeWrite);
+   //////////////////////// fill the blank ///////////////////////////////
+         // 파일 생성
+         m_FileDes.Write(ppayload,nlength);
+         m_FileDes.Close();
+         ///////////////////////////////////////////////////////////////////////
+   }
+      CATCH(CFileException, e)
+   {
 #ifdef _DEBUG
-		afxDump << "File could not be opened " << e->m_cause << "\n";
+      afxDump << "File could not be opened " << e->m_cause << "\n";
 #endif
-		return FALSE;
-	}
-	END_CATCH
+      return FALSE;
+   }
+   END_CATCH
 
-		return TRUE;
+      return TRUE;
 }
 
-BOOL CFileLayer::Receive() //EthernetLayer�κ��� ������
+BOOL CFileLayer::Receive()
 {
-	TRY
-	{
-		CFile m_FileDes(_T("IpcBuff.txt"), CFile::modeRead);
+   TRY
+   {
+      CFile m_FileDes(_T("IpcBuff.txt"), CFile::modeRead);
 
 			// 파일의 내용을 가져온다.
 
@@ -103,13 +103,13 @@ BOOL CFileLayer::Receive() //EthernetLayer�κ��� ������
 		CATCH(CFileException, e)
 	{
 #ifdef _DEBUG
-		afxDump << "File could not be opened " << e->m_cause << "\n";
+      afxDump << "File could not be opened " << e->m_cause << "\n";
 #endif
-		return FALSE;
-	}
-	END_CATCH
+      return FALSE;
+   }
+   END_CATCH
 
-		return TRUE;
+      return TRUE;
 }
 
 UINT CFileLayer::FileThread(LPVOID pParam)

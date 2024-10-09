@@ -19,6 +19,7 @@ class CFileLayer
 public:
 	BOOL	Receive();
 	BOOL	Send(unsigned char* ppayload, int nlength);
+	BOOL	fapp_type ;
 
 	CFileLayer(char* pName);
 	virtual ~CFileLayer();
