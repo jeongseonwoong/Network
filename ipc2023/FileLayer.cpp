@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "pch.h"
 #include "FileLayer.h"
+#include <vector>
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -17,87 +18,118 @@ static char THIS_FILE[] = __FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CFileLayer::CFileLayer(char* pName)
-	: CBaseLayer(pName)
+   : CBaseLayer(pName)
 {
 }
 
 CFileLayer::~CFileLayer()
 {
-	TRY
-	{
-		//////////////////////// fill the blank ///////////////////////////////
-				CFile::Remove(_T("IpcBuff.txt")); // ÆÄÀÏ Á¦°Å
-		///////////////////////////////////////////////////////////////////////
-	}
-		CATCH(CFileException, e)
-	{
+   TRY
+   {
+      //////////////////////// fill the blank ///////////////////////////////
+            CFile::Remove(_T("IpcBuff.txt")); // íŒŒì¼ ì œê±°
+      ///////////////////////////////////////////////////////////////////////
+   }
+      CATCH(CFileException, e)
+   {
 #ifdef _DEBUG
-		afxDump << "File cannot be removed\n";
+      afxDump << "File cannot be removed\n";
 #endif
-	}
-	END_CATCH
+   }
+   END_CATCH
 }
 
 BOOL CFileLayer::Send(unsigned char* ppayload, int nlength)
 {
-	TRY
-	{
-		CFile m_FileDes(_T("IpcBuff.txt"),
-						 CFile::modeCreate | CFile::modeWrite);
-	//////////////////////// fill the blank ///////////////////////////////
-			// ÆÄÀÏ »ı¼º
-			m_FileDes.Write(ppayload,nlength);
-			m_FileDes.Close();
-			///////////////////////////////////////////////////////////////////////
-	}
-		CATCH(CFileException, e)
-	{
+   TRY
+   {
+      CFile m_FileDes(_T("IpcBuff.txt"),
+                   CFile::modeCreate | CFile::modeWrite);
+   //////////////////////// fill the blank ///////////////////////////////
+         // íŒŒì¼ ìƒì„±
+         m_FileDes.Write(ppayload,nlength);
+         m_FileDes.Close();
+         ///////////////////////////////////////////////////////////////////////
+   }
+      CATCH(CFileException, e)
+   {
 #ifdef _DEBUG
-		afxDump << "File could not be opened " << e->m_cause << "\n";
+      afxDump << "File could not be opened " << e->m_cause << "\n";
 #endif
-		return FALSE;
-	}
-	END_CATCH
+      return FALSE;
+   }
+   END_CATCH
 
-		return TRUE;
+      return TRUE;
 }
 
 BOOL CFileLayer::Receive()
 {
-	TRY
-	{
-		CFile m_FileDes(_T("IpcBuff.txt"), CFile::modeRead);
+   TRY
+   {
+      CFile m_FileDes(_T("IpcBuff.txt"), CFile::modeRead);
 
-	//////////////////////// fill the blank ///////////////////////////////
-			// ÆÄÀÏÀÇ ³»¿ëÀ» °¡Á®¿Â´Ù.
+   //////////////////////// fill the blank ///////////////////////////////
+         // íŒŒì¼ì˜ ë‚´ìš©ì„ ê°€ì ¸ì˜¨ë‹¤.
 
-			// Ethernet Frame = Header | Data ÀÌ¹Ç·Î, ÇöÀç ¾î´ÀÁ¤µµÀÇ Å©±âÀÇ µ¥ÀÌÅÍ°¡ µé¾îÀÖ´ÂÁö ¸ğ¸¥´Ù.
-			// ±×·¡¼­ Ethernet Header Å©±â¿Í Ethernet DataÀÇ ÃÖ´ë Å©±â·Î FrameÀÇ Å©±â¸¦ Á¤ÇÑ´Ù.
-			int nlength = ETHER_HEADER_SIZE + ETHER_MAX_DATA_SIZE;
-			unsigned char* ppayload = new unsigned char[nlength + 1];
+         // Ethernet Frame = Header | Data ì´ë¯€ë¡œ, í˜„ì¬ ì–´ëŠì •ë„ì˜ í¬ê¸°ì˜ ë°ì´í„°ê°€ ë“¤ì–´ìˆëŠ”ì§€ ëª¨ë¥¸ë‹¤.
+         // ê·¸ë˜ì„œ Ethernet Header í¬ê¸°ì™€ Ethernet Dataì˜ ìµœëŒ€ í¬ê¸°ë¡œ Frameì˜ í¬ê¸°ë¥¼ ì •í•œë‹¤.
+         int nlength = ETHER_HEADER_SIZE + ETHER_MAX_DATA_SIZE;
+         unsigned char* ppayload = new unsigned char[nlength + 1];
 
-			// Á¤ÇØÁø FrameÀÇ ±æÀÌ¸¸Å­ ÆÄÀÏÀÇ ³»¿ë(»ó´ë ÇÁ·Î¼¼½º¿¡°Ô Àü¼Û ¹ŞÀº Ethernet Frame)À»
-			// ÀĞ¾î¿Í¼­ ppayload¸¦ °áÁ¤ÇÑ´Ù.
-			m_FileDes.Read(ppayload,nlength);
-			ppayload[nlength] = '\0';
+         // ì •í•´ì§„ Frameì˜ ê¸¸ì´ë§Œí¼ íŒŒì¼ì˜ ë‚´ìš©(ìƒëŒ€ í”„ë¡œì„¸ìŠ¤ì—ê²Œ ì „ì†¡ ë°›ì€ Ethernet Frame)ì„
+         // ì½ì–´ì™€ì„œ ppayloadë¥¼ ê²°ì •í•œë‹¤.
+         int Read = m_FileDes.Read(ppayload,nlength) ;
+         ppayload[Read] = '\0' ;
+         
+         static std::vector<unsigned char*> fragments ;
 
-			// Ethernet °èÃşÀ¸·Î ÆÄÀÏ¿¡¼­ °¡Á®¿Â FrameÀ» ³Ñ°ÜÁØ´Ù. 
-			if (!mp_aUpperLayer[0]->Receive(ppayload)) { // ³Ñ°ÜÁÖÁö ¸øÇß´Ù¸é FALSE
-				m_FileDes.Close();
-				return FALSE;
-			}
-			// ¼º°øÇß´Ù¸é TRUE¸¦ return
-	///////////////////////////////////////////////////////////////////////
-			m_FileDes.Close();
-	}
-		CATCH(CFileException, e)
-	{
+         if (Read > 1488) {
+
+            fragments.push_back(ppayload) ;
+
+            int total_frag = (Read / 1488) + 1 ;
+
+            int size = fragments.size() ;
+            ProgressBar_update = (size, total_frag) ;
+
+            if (fragments.size() == total_frag) {
+               fapp_type = true;
+               Save(fragments) ;
+               fragments.clear() ;
+            }
+
+         }
+         else {
+            mp_aUpperLayer[0]->Receive(ppayload);
+            fapp_type = false ;
+         }
+         // Ethernet ê³„ì¸µìœ¼ë¡œ íŒŒì¼ì—ì„œ ê°€ì ¸ì˜¨ Frameì„ ë„˜ê²¨ì¤€ë‹¤. 
+         // ì„±ê³µí–ˆë‹¤ë©´ TRUEë¥¼ return
+   ///////////////////////////////////////////////////////////////////////
+         m_FileDes.Close();
+   }
+      CATCH(CFileException, e)
+   {
 #ifdef _DEBUG
-		afxDump << "File could not be opened " << e->m_cause << "\n";
+      afxDump << "File could not be opened " << e->m_cause << "\n";
 #endif
-		return FALSE;
-	}
-	END_CATCH
+      return FALSE;
+   }
+   END_CATCH
 
-		return TRUE;
+      return TRUE;
+}
+
+void Save(const std:: vector<unsigned char*>& fragments) {
+   if (fapp_type) {
+        //íŒŒì¼ì— ì €ì¥í•˜ë„ë¡ êµ¬í˜„ í•„ìš” 
+   }
+}
+
+void ProgressBar_update(int size, int total_frag){
+    if(total_frag > 0 ){
+        float progress = (static_cast<float>(size) / total_frag) * 100 ;
+        //UI ì˜í–¥ ë¯¸ì¹˜ë„ë¡ êµ¬í˜„ í•„ìš”
+    }
 }
