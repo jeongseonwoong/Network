@@ -1,4 +1,4 @@
-﻿
+
 // Filetransfer2019Dlg.cpp: 구현 파일
 //
 
@@ -60,13 +60,15 @@ Cipc2023Dlg::Cipc2023Dlg(CWnd* pParent /*=nullptr*/)
 	m_LayerMgr.AddLayer(new CNILayer("NI"));
 	m_LayerMgr.AddLayer(new CEthernetLayer("Ethernet"));
 	m_LayerMgr.AddLayer(new CChatAppLayer("ChatApp"));
+	m_LayerMgr.AddLayer(new CFileLayer("FileApp"));
 
 	// 레이어 연결
-	m_LayerMgr.ConnectLayers("NI ( *Ethernet ( *ChatApp ( *ChatDlg ) ) )"); //레이어 계층
+	m_LayerMgr.ConnectLayers("NI ( *Ethernet ( *ChatApp ( *ChatDlg ) *FileApp ) )"); //레이어 계층
 
 	m_ChatApp = (CChatAppLayer*)mp_UnderLayer;
 	m_Eth = (CEthernetLayer*)m_LayerMgr.GetLayer("Ethernet");
 	m_NI = (CNILayer*)m_LayerMgr.GetLayer("NI");
+	m_FileApp = (CFileLayer*)m_LayerMgr.GetLayer("FileApp");
 	//Protocol Layer Setting
 }
 
@@ -459,14 +461,44 @@ void Cipc2023Dlg::OnCbnSelchangeComboEth()
 }
 
 
-void Cipc2023Dlg::OnBnClickedButtonFileAdd()
+void Cipc2023Dlg::OnBnClickedButtonFileAdd() //파일 탐색기 열기
 {
-	m_FileName = "ㅎㅇ";
-	GetDlgItem(IDC_FILE_NAME)->SetWindowText(m_FileName);
+	CFileDialog dlg(TRUE); // 파일 탐색기 열기
+
+	if (dlg.DoModal() == IDOK) // 사용자가 파일을 선택하고 확인을 눌렀을 경우
+	{
+		// 선택한 파일의 경로에 대한 정보를 가져와서 화면에 출력
+		m_FileName = dlg.GetPathName();
+		GetDlgItem(IDC_FILE_NAME)->SetWindowText(m_FileName);
+	}
 }
 
 
 void Cipc2023Dlg::OnBnClickedButtonFileSend()
 {
-	// TODO: 여기에 명령 처리기 코드를 추가합니다.
+	// 파일 열기
+	CFile file;
+	if (!file.Open(m_FileName, CFile::modeRead | CFile::typeBinary)) {
+		AfxMessageBox(_T("파일을 열 수 없습니다."));
+		return;
+	}
+
+	DWORD fileSize = file.GetLength(); 	// 파일 크기 가져오기
+
+	unsigned char* buffer = new unsigned char[fileSize]; //파일 데이터 담을 버퍼
+	
+	//파일 읽기
+	file.Read(buffer, fileSize);
+	file.Close();
+
+	BOOL isSuccess = m_FileApp->Send(buffer, fileSize); //파일 데이터를 FileLayer로
+	
+	//아래는 파일 전송 확인용
+	if (isSuccess) {
+		AfxMessageBox(_T("파일 전송 성공"));
+	}
+	else {
+		AfxMessageBox(_T("파일 전송 실패"));
+	}
+
 }
