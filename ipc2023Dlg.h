@@ -1,4 +1,4 @@
-﻿
+
 // ipc2023Dlg.h: 헤더 파일
 //
 
@@ -8,6 +8,7 @@
 #include "ChatAppLayer.h"	// Added by ClassView
 #include "EthernetLayer.h"	// Added by ClassView
 #include "NILayer.h"		// Added by ClassView
+#include "FileLayer.h"
 
 // CChattingDlg 대화 상자
 class Cipc2023Dlg : public CDialogEx, public CBaseLayer
@@ -80,6 +81,7 @@ private:
 	CChatAppLayer* m_ChatApp;
 	CNILayer* m_NI;
 	CEthernetLayer* m_Eth;
+	CFileLayer* m_FileApp;
 
 	// Implementation
 	UINT			m_wParam;
