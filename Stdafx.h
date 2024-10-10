@@ -59,6 +59,7 @@ using namespace std;
 #define TCP_PORT_FILE	0x2090
 
 #define NI_COUNT_NIC	10
+#define MAX_APP_DATA 1488 //파일 데이터
 
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
