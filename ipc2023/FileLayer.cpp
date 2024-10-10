@@ -127,61 +127,58 @@ BOOL CFileLayer::Receive()
 
 UINT CFileLayer::FileThread(LPVOID pParam)
 {
-	using namespace std;
-	// pParam�� ThreadParams Ÿ������ ĳ����
-	ThreadParams* pParams = (ThreadParams*)pParam;
+    using namespace std;
+    // pParam을 ThreadParams 타입으로 캐스팅
+    ThreadParams* pParams = (ThreadParams*)pParam;
+    CFileLayer* pFileLayer = pParams->pFileLayer;
 
-	// �μ� ����
-	unsigned char* ppayload = pParams->ppayload;
-	int nlength = pParams->nlength;
+    // 인수 추출
+    unsigned char* ppayload = pParams->ppayload;
+    int nlength = pParams->nlength;
 
-	const int CHUNK_SIZE = 1488;
-	int chunkCount = (nlength + CHUNK_SIZE - 1) / CHUNK_SIZE; // �� ���� ���� ���
-	std::vector<FILE_FRAGMENT> payloadChunks;
+    const int CHUNK_SIZE = 1488;
+    int chunkCount = (nlength + CHUNK_SIZE - 1) / CHUNK_SIZE; // 총 조각 개수 계산
+    int data_index = 0;
+    int finished_index = 0;
 
-	// �����͸� 1488����Ʈ�� ������ FILE_FRAGMENT ����ü�� ����
-	for (int i = 0; i < chunkCount; ++i) {
-		FILE_FRAGMENT fragment = {};
-		fragment.fapp_totlen = nlength;
-		fragment.fapp_seq_num = i;
+    // 데이터를 1488바이트씩 나누어 FILE_FRAGMENT 구조체에 저장하고 전송
+    for (int i = 0; i < chunkCount; ++i) {
+        FILE_FRAGMENT fragment = {};
+        fragment.fapp_totlen = nlength;
+        fragment.fapp_seq_num = i;
 
-		// ������ Ÿ�� ����
-		if (chunkCount == 1) {
-			fragment.fapp_type = 0x00; // ����ȭ���� ����
-		}
-		else if (i == 0) {
-			fragment.fapp_type = 0x01; // ����ȭ�� ù �κ�
-		}
-		else if (i == chunkCount - 1) {
-			fragment.fapp_type = 0x03; // ����ȭ�� ������ �κ�
-		}
-		else {
-			fragment.fapp_type = 0x02; // ����ȭ�� �߰� �κ�
-		}
+        // 조각의 타입 설정
+        if (chunkCount == 1) {
+            fragment.fapp_type = 0x00; // 단편화되지 않음
+        } else if (i == 0) {
+            fragment.fapp_type = 0x01; // 단편화의 첫 부분
+        } else if (i == chunkCount - 1) {
+            fragment.fapp_type = 0x03; // 단편화의 마지막 부분
+        } else {
+            fragment.fapp_type = 0x02; // 단편화의 중간 부분
+        }
 
-		// ���� ����Ʈ�� CHUNK_SIZE �� ���� ���� �����Ͽ� ������ ������ ó��
-		int bytesToWrite = min(CHUNK_SIZE, nlength - i * CHUNK_SIZE);
+        // 남은 바이트와 CHUNK_SIZE 중 작은 값을 선택하여 마지막 조각을 처리
+        int bytesToWrite = min(CHUNK_SIZE, nlength - i * CHUNK_SIZE);
 
-		// �����͸� fapp_data�� ����
-		memcpy(fragment.fapp_data, ppayload + i * CHUNK_SIZE, bytesToWrite);
+        // 데이터를 fapp_data에 복사
+        memcpy(fragment.fapp_data, ppayload + i * CHUNK_SIZE, bytesToWrite);
 
-		// �޽��� ���� ���� (�ʿ信 ���� ���� ����)
-		fragment.fapp_msg_type = 0x01; // ��: �Ϲ� ������
+        // 메시지 종류 설정 (필요에 따라 변경 가능)
+        fragment.fapp_msg_type = 0x01; // 예: 일반 데이터
 
-		// ���Ϳ� ���� �߰�
-		payloadChunks.push_back(fragment);
-	}
+        // 현재 조각을 전송
+        BOOL isSuccess = pFileLayer->mp_UnderLayer->Send((unsigned char*)&fragment, sizeof(FILE_FRAGMENT));
 
-	// ���� payloadChunks ���͸� ����Ͽ� �������� ������ ���� �Ǵ� ó�� ����
+        // 전송에 실패할 경우, 스레드를 종료하고 FALSE 반환
+        if (!isSuccess) {
+            delete pParams;
+            return FALSE;
+        }
+    }
 
-	// �������� �Ҵ��� �޸� ����
-	delete pParams;
+    // 동적으로 할당한 메모리 해제
+    delete pParams;
 
-	return 0; // ������ ����
+    return TRUE; // 스레드 종료
 }
-
-
-
-
-
-
